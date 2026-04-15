@@ -4,31 +4,38 @@
     <meta charset="utf-8">
     <title>Vikingdev TCG</title>
     <script type="text/javascript">
-        // Single Page Apps for GitHub Pages
-        // https://github.com/rafrex/spa-github-pages
-        // This script takes the current url and converts the path into a query parameter,
-        // then redirects the browser to the new url with the query parameter and
-        // hash fragment.
+        // Single Page Apps for GitHub Pages Redirection Logic
         var l = window.location;
         var path = l.pathname.split('/').filter(Boolean);
 
-        // If there's at least one path segment, it's likely a store/user identifier
-        // Format: vikingtcg.xyz/toonShop
+        // We assume the last segment before the 404 was the store identifier if it's not a known file
+        // Or if we are in a subdirectory environment like /Viking%20TCG/
+
+        // Find if public.html exists in the path
+        var publicIndex = path.indexOf('public.html');
+
         if (path.length > 0) {
-            var identifier = path[0]; // Take the first segment as the store identifier
+            // Logic to handle both root and subdirectory deployments
+            // If the last segment is likely a store name (not ending in .html)
+            var lastSegment = path[path.length - 1];
 
-            // Reconstruct the base path (excluding the identifier)
-            var basePath = l.pathname.split('/').slice(0, -1).join('/');
-            if (basePath === '') basePath = '';
+            if (!lastSegment.includes('.')) {
+                var identifier = lastSegment;
+                var basePathSegments = path.slice(0, -1);
+                var basePath = '/' + basePathSegments.join('/');
+                if (basePath === '/') basePath = '';
 
-            var newSearch = (l.search ? l.search + '&' : '?') + 'id=' + identifier;
+                var newSearch = (l.search ? l.search + '&' : '?') + 'id=' + identifier;
 
-            l.replace(
-                l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-                basePath + '/public.html' + newSearch + l.hash
-            );
+                l.replace(
+                    l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+                    basePath + '/public.html' + newSearch + l.hash
+                );
+            } else {
+                // Regular 404 or direct file access that failed
+                l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/index.html');
+            }
         } else {
-            // Fallback to index if no path
             l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/index.html');
         }
     </script>
