@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="https://vikingtcg.xyz/favi.png">
+    <title>Vikingdev TCG</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/subastas_v2.css">
+    <link rel="stylesheet" href="css/cards.css">
+    <link rel="stylesheet" href="css/barajaryg.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript" src="js/turn.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Three.js for 3D Loading Screen -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="js/loading3d.js"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+</head>
+<body class="public-body">
+    <button id="btn-close-focus-mode" class="btn-close-focus" onclick="window.clearShareFilters()">
+        <i class="fas fa-arrow-left"></i> Ver Todo el Catálogo
+    </button>
+
+    <!-- Floating User Panel -->
+    <div class="top-left-panel" id="top-panel">
+        <div class="user-menu-container">
+            <button class="user-avatar-btn" id="avatar-btn">
+                <i class="fas fa-user"></i>
+            </button>
+            <div class="user-dropdown-menu" id="user-dropdown">
+                <div class="user-dropdown-info">
+                    <img id="dropdown-user-logo" src="" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; display: none;">
+                    <div class="user-dropdown-name" id="dropdown-user-name">Invitado</div>
+                    <div class="user-dropdown-role" id="dropdown-user-role" style="display: none;">Invitado</div>
+                </div>
+                <a href="admin.html" class="menu-item"><i class="fas fa-lock"></i> Panel Admin</a>
+                <a href="play.html" class="menu-item"><i class="fas fa-gamepad"></i> Play!</a>
+                <a href="#" class="menu-item" id="menu-wishlist-btn"><i class="fas fa-heart"></i> Ver Buscamos</a>
+                <div class="menu-item theme-menu-container">
+                    <i class="fas fa-palette"></i>
+                    <div class="theme-switcher-inline">
+                        <button class="theme-btn-small" data-theme="theme-light" title="Modo Claro"></button>
+                        <button class="theme-btn-small" data-theme="theme-medium" title="Modo Medio"></button>
+                        <button class="theme-btn-small" data-theme="theme-dark" title="Modo Oscuro"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="cart-container-panel">
+            <a href="carrito.html" class="user-avatar-btn" id="cart-btn" title="Ver Carrito">
+                <i class="fas fa-shopping-cart"></i>
+                <span id="cart-count">0</span>
+            </a>
+        </div>
+    </div>
+    <!-- Pantalla de Carga -->
+    <div id="loading-screen" class="loading-screen">
+        <div id="loading-3d-container"></div>
+        <div class="loading-message">Cargando interfaz...</div>
+    </div>
+
+    <header class="public-header">
+        <div class="store-badge">
+            <i class="fas fa-store" id="public-store-icon"></i>
+            <img id="public-store-logo" src="" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 1px solid var(--primary-color); display: none;">
+            <span id="public-store-name">Cargando Tienda...</span>
+        </div>
+        <h1 id="public-view-title">Colección de Álbumes</h1>
+        <p>Explora nuestra selección de cartas y colecciones exclusivas.</p>
+
+        <nav class="public-nav">
+            <button class="nav-btn active" data-view="albums"><i class="fas fa-book"></i> Álbumes</button>
+            <button class="nav-btn" data-view="sealed"><i class="fas fa-box"></i> Productos</button>
+            <button class="nav-btn" data-view="preorders" id="preorders-nav-btn"><i class="fas fa-fire"></i> Preventas</button>
+            <button class="nav-btn" data-view="decks"><i class="fas fa-layer-group"></i> Decks</button>
+            <button class="nav-btn" data-view="wishlist" id="wishlist-nav-btn"><i class="fas fa-heart"></i> Buscamos</button>
+            <button class="nav-btn" data-view="auctions" id="auctions-nav-btn"><i class="fas fa-gavel"></i> Subastas</button>
+            <button class="nav-btn" data-view="events"><i class="fas fa-calendar-alt"></i> Eventos</button>
+        </nav>
+
+
+        <div class="search-container">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Buscar álbumes o cartas...">
+                <button id="clear-search" style="display:none;"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <div class="public-main-container" id="main-view-container">
+        <div id="no-results" class="empty" style="display:none; margin-top: 50px;">
+            <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.5;"></i>
+            <p>No se encontraron resultados para tu búsqueda.</p>
+        </div>
+
+        <div id="albums-view" class="view-section active">
+            <div id="albums-container">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando álbumes...
+                </div>
+            </div>
+        </div>
+
+        <div id="sealed-view" class="view-section">
+            <div id="sealed-container" class="decks-grid">
+                <!-- Sealed products will be loaded here -->
+            </div>
+        </div>
+
+        <div id="preorders-view" class="view-section">
+            <div id="preorders-container" class="decks-grid">
+                <!-- Preorders will be loaded here -->
+            </div>
+        </div>
+
+        <div id="decks-view" class="view-section">
+            <div id="decks-container" class="decks-grid">
+                <!-- Decks will be loaded here -->
+            </div>
+        </div>
+
+        <div id="wishlist-view" class="view-section">
+            <div class="wishlist-controls-row" id="wishlist-tabs-container">
+                <div class="wishlist-tabs" id="wishlist-tabs">
+                    <button class="wishlist-tab active" data-index="0">Slot 1</button>
+                    <button class="wishlist-tab" data-index="1">Slot 2</button>
+                    <button class="wishlist-tab" data-index="2">Slot 3</button>
+                    <button class="wishlist-tab" data-index="3">Slot 4</button>
+                    <button class="wishlist-tab" data-index="4">Slot 5</button>
+                </div>
+                <button id="btn-owner-add-wishlist" class="btn btn-sm" style="display: none; border-radius: 50px;">
+                    <i class="fas fa-plus"></i> Añadir Carta
+                </button>
+            </div>
+            <div id="wishlist-container" class="wishlist-grid">
+                <!-- Wishlist items will be loaded here -->
+            </div>
+        </div>
+
+        <div id="auctions-view" class="view-section">
+            <div id="auctions-container" class="auction-grid">
+                <!-- Subastas cargadas aquí -->
+            </div>
+        </div>
+
+        <div id="events-view" class="view-section">
+            <div id="events-container" class="decks-grid">
+                <!-- Eventos cargados aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Overlay / Modal -->
+    <!-- Spirit Selection Modal -->
+    <div id="spirit-modal" class="overlay">
+        <div class="overlay-content spirit-selection-content" style="max-width: 1100px; width: 95%;">
+            <span id="close-spirit-modal" class="close-btn">&times;</span>
+            <h2 style="color: #00d2ff; text-align: center; margin-bottom: 20px;">Compañeros</h2>
+
+            <div id="public-spirits-grid" class="spirits-grid">
+                <!-- Spirits will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="gltf-overlay" class="overlay">
+        <span id="close-gltf-overlay" class="close-btn-floating">&times;</span>
+        <div class="overlay-content gltf-expanded-content">
+            <model-viewer id="expanded-gltf-viewer"
+                loading="lazy"
+                camera-controls
+                auto-rotate
+                shadow-intensity="1"
+                environment-image="neutral"
+                exposure="1.2"
+                oncontextmenu="return false;">
+            </model-viewer>
+            <div class="card-info">
+                <div id="expanded-gltf-name" class="card-name">Nombre del Compañero</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Details Modal -->
+    <div id="event-details-overlay" class="overlay">
+        <div class="overlay-content" style="max-width: 600px; width: 95%;">
+            <span id="close-ed-overlay" class="close-btn">&times;</span>
+            <h2 id="ed-name">Detalles del Evento</h2>
+            <div id="ed-info" style="margin: 20px 0; text-align: center; width: 100%;">
+                <img id="ed-image" src="" style="width: 100%; border-radius: 12px; margin-bottom: 20px; display: none;">
+                <p id="ed-desc" style="color: var(--text-color); line-height: 1.6; text-align: left;"></p>
+            </div>
+            <button onclick="$('#event-details-overlay').removeClass('active')" class="btn" style="width: 100%;">Cerrar</button>
+        </div>
+    </div>
+
+
+    <!-- External Search Modal for Wishlist Owner -->
+    <div id="wishlist-search-modal" class="overlay">
+        <div class="overlay-content" style="max-width: 800px; width: 95%;">
+            <span id="close-wishlist-search-modal" class="close-btn">&times;</span>
+            <h2 style="color: #00d2ff; text-align: center; margin-bottom: 20px;">Añadir a la Wishlist</h2>
+
+            <div class="search-box" style="margin-bottom: 20px; max-width: 100%;">
+                <i class="fas fa-search"></i>
+                <input type="text" id="wishlist-external-search-input" placeholder="Buscar por nombre o código (Ej: Dark Magician)...">
+                <button id="btn-wishlist-external-search" class="btn btn-sm" style="margin-left: 10px;">Buscar</button>
+            </div>
+
+            <div id="wishlist-external-search-results" class="expansion-grid" style="max-height: 400px; overflow-y: auto;">
+                <!-- Resultados de búsqueda aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-overlay" class="overlay">
+        <div class="overlay-content share-modal-content">
+            <span id="close-share-modal" class="close-btn">&times;</span>
+            <h2 id="share-modal-title">Compartir</h2>
+
+            <div id="share-qr-container" style="background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                <div id="share-qr-code"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Enlace Directo</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="share-link-input" readonly>
+                    <button id="btn-copy-share-link" class="btn btn-sm" style="white-space: nowrap;"><i class="fas fa-copy"></i></button>
+                </div>
+            </div>
+
+            <div class="social-share-grid">
+                <button class="social-share-btn wa" id="share-wa"><i class="fab fa-whatsapp"></i></button>
+                <button class="social-share-btn tg" id="share-tg"><i class="fab fa-telegram-plane"></i></button>
+                <button class="social-share-btn fb" id="share-fb"><i class="fab fa-facebook-f"></i></button>
+                <button class="social-share-btn ms" id="share-ms"><i class="fab fa-facebook-messenger"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auction Detail Modal -->
+    <div id="auction-detail-modal" class="overlay">
+        <div class="overlay-content" style="max-width: 900px; width: 95%;">
+            <span id="close-auction-modal" class="close-btn">&times;</span>
+            <div class="bidding-layout">
+                <div class="auction-media">
+                    <img id="auction-modal-image" src="" style="width: 100%; border-radius: 12px; background: #000; height: 350px; object-fit: contain;">
+                    <div id="auction-modal-timer" class="auction-timer" style="justify-content: center; margin-top: 15px; font-size: 1.5rem;">
+                        00:00:00
+                    </div>
+                </div>
+                <div class="auction-bidding-area">
+                    <h2 id="auction-modal-title" style="margin: 0 0 10px 0;">Nombre del Artículo</h2>
+                    <p id="auction-modal-desc" style="font-size: 0.9rem; color: #aaa; margin-bottom: 20px;"></p>
+
+                    <div class="auction-bid-info" style="padding: 20px; margin-bottom: 20px;">
+                        <div>
+                            <div class="current-bid-label">Puja Actual</div>
+                            <div id="auction-modal-current-bid" class="current-bid-value" style="font-size: 2rem;">$0.00</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="current-bid-label">Base</div>
+                            <div id="auction-modal-start-bid" style="font-weight: 700;">$0.00</div>
+                        </div>
+                    </div>
+
+                    <div id="bid-input-container">
+                        <div class="form-group">
+                            <label>Tu Puja ($)</label>
+                            <input type="number" id="input-bid-amount" placeholder="Ingresa tu oferta">
+                        </div>
+                        <div class="quick-bid-grid" id="quick-bid-container">
+                            <!-- Quick bid buttons here -->
+                        </div>
+                        <button id="btn-place-bid" class="btn" style="width: 100%; height: 50px; font-size: 1.1rem;">
+                            <i class="fas fa-gavel"></i> PUJAR AHORA
+                        </button>
+                    </div>
+
+                    <div id="auction-winner-display" style="display: none; text-align: center; padding: 20px; background: rgba(46, 204, 113, 0.1); border-radius: 12px; border: 1px solid #2ecc71;">
+                        <h3 style="color: #2ecc71; margin: 0;"><i class="fas fa-crown"></i> GANADOR</h3>
+                        <div id="auction-winner-name" style="font-size: 1.5rem; font-weight: 800; margin: 10px 0;">-</div>
+                        <div id="auction-winner-amount" style="font-weight: 700; opacity: 0.8;">-</div>
+                    </div>
+
+                    <div class="top-bidders-list">
+                        <h4 style="margin: 0 0 10px 0; font-size: 0.8rem; text-transform: uppercase; color: #666;">Top 5 Pujas</h4>
+                        <div id="auction-top-bidders">
+                            <!-- Bidders list -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="auction-rules-container" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h4 style="margin: 0 0 10px 0;"><i class="fas fa-info-circle"></i> Reglas de la Subasta</h4>
+                <p id="auction-modal-rules" style="font-size: 0.85rem; color: #aaa; line-height: 1.5;"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="image-overlay" class="overlay">
+        <div class="overlay-content">
+            <span id="close-btn">&times;</span>
+            <div id="card-3d-container" class="card-3d-container">
+                <div id="card-3d" class="card-3d">
+                    <div id="z-text-container">
+                        <img id="expanded-image" src="" alt="Carta Expandida">
+                    </div>
+                    <div class="holo-layer"></div>
+                </div>
+            </div>
+            <div class="card-info">
+                <div id="owner-wishlist-controls" style="display: none; width: 100%; margin-bottom: 20px;">
+                    <input type="text" id="owner-card-name" class="wishlist-edit-input" style="font-size: 1.2rem; font-weight: 800; text-align: center; margin-bottom: 15px;" placeholder="Nombre de la carta">
+
+                    <div class="info-grid" style="margin-top: 0;">
+                        <div class="info-item">
+                            <div class="info-label">Rareza</div>
+                            <input type="text" id="owner-card-rarity" class="wishlist-edit-input" style="margin: 0; padding: 2px 5px;" placeholder="Ej: Super Rare">
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Cantidad</div>
+                            <input type="number" id="owner-card-quantity" class="wishlist-edit-input" style="margin: 0; padding: 2px 5px;" placeholder="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 10px; text-align: left;">
+                        <label style="font-size: 10px; opacity: 0.7;">Efecto Holo</label>
+                        <select id="owner-card-holo" class="wishlist-edit-input">
+                            <option value="">Ninguno</option>
+                            <option value="foil">Foil</option>
+                            <option value="custom-texture">CustomTexture</option>
+                            <option value="custom-foil">CustomFoil</option>
+                            <option value="pk-rare-holo">PK: Rare Holo</option>
+                            <option value="pk-rare-holo-cosmos">PK: Cosmos Holo</option>
+                            <option value="pk-rare-holo-v">PK: Rare Holo V</option>
+                            <option value="pk-rare-holo-vmax">PK: Rare Holo VMAX</option>
+                            <option value="pk-rare-holo-vstar">PK: Rare Holo VSTAR</option>
+                            <option value="pk-rare-rainbow">PK: Rare Rainbow</option>
+                            <option value="pk-rare-rainbow-alt">PK: Rare Rainbow Alt</option>
+                            <option value="pk-rare-secret">PK: Rare Secret</option>
+                            <option value="pk-rare-shiny">PK: Rare Shiny</option>
+                            <option value="pk-rare-shiny-v">PK: Rare Shiny V</option>
+                            <option value="pk-rare-shiny-vmax">PK: Rare Shiny VMAX</option>
+                            <option value="pk-amazing-rare">PK: Amazing Rare</option>
+                            <option value="pk-radiant-rare">PK: Radiant Rare</option>
+                            <option value="pk-rare-ultra">PK: Rare Ultra</option>
+                            <option value="pk-trainer-gallery">PK: Trainer Gallery</option>
+                            <option value="pk-trainer-gallery-secret-rare">PK: TG Secret Rare</option>
+                            <option value="pk-trainer-gallery-v-max">PK: TG VMAX</option>
+                            <option value="pk-trainer-gallery-v-regular">PK: TG V</option>
+                            <option value="pk-trainer-full-art">PK: Trainer Full Art</option>
+                            <option value="pk-rare-holo-v-full-art">PK: V Full Art</option>
+                            <option value="pk-reverse-holo">PK: Reverse Holo</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="owner-mask-container" style="display: none; text-align: left;">
+                        <label style="font-size: 10px; opacity: 0.7;">URL Máscara</label>
+                        <input type="text" id="owner-card-mask" class="wishlist-edit-input" placeholder="https://...">
+                    </div>
+
+                    <div style="margin-top: 15px; display: flex; justify-content: center; align-items: center; gap: 15px;">
+                        <label class="wishlist-obtained-toggle" style="margin: 0; background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 50px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="owner-card-3d" checked>
+                            <span style="font-size: 10px; font-weight: 800;">3D</span>
+                        </label>
+                        <label class="wishlist-obtained-toggle" style="margin: 0; background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 50px;">
+                            <input type="checkbox" id="owner-card-obtained">
+                            <span id="owner-obtained-label">BUSCANDO</span>
+                        </label>
+                        <button id="btn-owner-delete-wishlist" class="btn btn-danger" style="padding: 8px 15px; border-radius: 50px; font-size: 0.8rem;">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+
+                <div id="visitor-card-info" style="width: 100%;">
+                    <div id="card-name" class="card-name">Nombre de la Carta</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Rareza</div>
+                            <div id="card-rarity" class="info-value">-</div>
+                        </div>
+                        <div class="info-item" id="expansion-item">
+                            <div class="info-label">Expansión</div>
+                            <div id="card-expansion" class="info-value">-</div>
+                        </div>
+                        <div class="info-item" id="condition-item">
+                            <div class="info-label">Estado</div>
+                            <div id="card-condition" class="info-value">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Cantidad</div>
+                            <div id="card-quantity" class="info-value">1</div>
+                        </div>
+                        <div class="info-item price-item">
+                            <div class="info-label">Precio Estimado</div>
+                            <div id="card-price" class="info-value">-</div>
+                        </div>
+                    </div>
+                    <div id="wishlist-info-extra" style="display: none; flex-direction: column; gap: 5px; width: 100%; margin-top: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
+                        <div class="info-label" style="font-size: 0.8rem; opacity: 0.7; text-align: left;">Notas:</div>
+                        <div id="card-notes" style="font-size: 0.9rem; color: white; line-height: 1.4; text-align: left;">-</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 25px;">
+                    <button id="btn-share-card-modal" class="btn btn-secondary" style="width: 100%; border-radius: 15px; padding: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <i class="fas fa-share-alt"></i> Compartir esta Carta
+                    </button>
+                    <button id="btn-add-to-cart" class="btn btn-add-cart-modal" style="margin-top: 0;">
+                        <i class="fas fa-cart-plus"></i> Agregar al Carrito
+                    </button>
+                    <div id="wishlist-contact-buttons" style="display: none; flex-direction: column; gap: 10px; width: 100%;">
+                        <button id="btn-wishlist-whatsapp" class="btn" style="background: #25d366 !important; width: 100%;">
+                            <i class="fab fa-whatsapp"></i> Enviar a WhatsApp
+                        </button>
+                        <button id="btn-wishlist-messenger" class="btn" style="background: #006aff !important; width: 100%;">
+                            <i class="fab fa-facebook-messenger"></i> Enviar a Messenger
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@9/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/companion-bot.js"></script>
+    <script src="js/ztext.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- Floating Companion (Jules: Draggable wrapper) -->
+    <div id="companion-wrapper">
+        <div class="companion-drag-handle" id="companion-drag-handle" title="Arrastra para mover al compañero">
+            <i class="fas fa-arrows-alt"></i>
+        </div>
+        <div id="floating-companion-container"></div>
+        <div id="companion-bubble" class="companion-bubble"></div>
+
+        <!-- Companion Menu -->
+        <div class="companion-menu-popup" id="companion-menu">
+            <div class="companion-menu-item" id="menu-item-chat"><i class="fas fa-comment-dots"></i> Hablar</div>
+            <div class="companion-menu-item" id="menu-item-details"><i class="fas fa-search-plus"></i> Ver Detalles</div>
+            <div class="companion-menu-item" id="menu-item-play"><i class="fas fa-gamepad"></i> Jugar Partida</div>
+        </div>
+    </div>
+
+    <!-- Deck List View Modal -->
+    <div id="deck-list-overlay" class="overlay">
+        <div class="deck-list-modal">
+            <span id="close-deck-list" class="close-btn-floating">&times;</span>
+            <div class="deck-list-header" style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                <h2 id="deck-list-title" style="margin: 0;">Lista de Cartas</h2>
+                <div class="deck-filter-tabs" style="display: flex; gap: 10px; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.1);">
+                    <button class="btn btn-sm deck-filter-tab active" data-filter="all" style="border-radius: 50px; padding: 5px 20px;">Todas</button>
+                    <button class="btn btn-sm deck-filter-tab" data-filter="missing" style="border-radius: 50px; padding: 5px 20px;">Faltantes</button>
+                </div>
+            </div>
+            <div id="deck-grid-container" class="deck-grid-popup">
+                <!-- Cartas se cargarán aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot Window -->
+    <!-- Shared Item Dedicated Modal -->
+    <div id="shared-item-modal" class="overlay">
+        <div class="overlay-content shared-preview-content">
+            <button class="btn btn-close-focus" id="close-shared-modal" style="display: flex; position: absolute; top: 15px; left: 15px; width: auto; height: auto;">
+                <i class="fas fa-arrow-left"></i> Ver Catálogo Completo
+            </button>
+            <div id="shared-content-container" style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; margin-top: 40px;">
+                <!-- Cloned content here -->
+            </div>
+
+            <div class="share-tools-integrated" style="width: 100%; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                <h4 style="margin-bottom: 15px; color: var(--primary-color);">¿Te gusta lo que ves? ¡Compártelo!</h4>
+                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+                    <button class="btn btn-sm" id="btn-shared-copy-link"><i class="fas fa-copy"></i> Copiar Link</button>
+                    <button class="btn btn-sm btn-secondary" id="btn-shared-show-qr"><i class="fas fa-qrcode"></i> QR</button>
+                </div>
+                <div class="social-share-grid" style="margin-top: 0; transform: scale(0.9);">
+                    <button class="social-share-btn wa shared-social-btn" data-platform="wa"><i class="fab fa-whatsapp"></i></button>
+                    <button class="social-share-btn tg shared-social-btn" data-platform="tg"><i class="fab fa-telegram-plane"></i></button>
+                    <button class="social-share-btn fb shared-social-btn" data-platform="fb"><i class="fab fa-facebook-f"></i></button>
+                    <button class="social-share-btn ms shared-social-btn" data-platform="ms"><i class="fab fa-facebook-messenger"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chatbot-container">
+        <div class="chatbot-header">
+            <h3>Asistente Vikingdev</h3>
+            <span id="close-chatbot" style="cursor:pointer; font-size: 1.5rem;">&times;</span>
+        </div>
+        <div class="chatbot-messages" id="chat-messages">
+            <div class="chat-msg msg-bot">¡Hola! Soy tu asistente. ¿En qué puedo ayudarte hoy?</div>
+        </div>
+        <div class="chatbot-input-area">
+            <div class="faq-buttons">
+                <button class="faq-btn" data-faq="album">¿Cómo crear álbum?</button>
+                <button class="faq-btn" data-faq="scanner">¿Cómo usar el scanner?</button>
+                <button class="faq-btn" data-faq="theme">Cambiar tema</button>
+                <button class="faq-btn" data-faq="spirit">¿Qué es un compañero?</button>
+            </div>
+            <div class="chat-input-wrapper">
+                <input type="text" id="chat-input" placeholder="Escribe tu mensaje...">
+                <button id="send-chat" class="btn btn-sm"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
