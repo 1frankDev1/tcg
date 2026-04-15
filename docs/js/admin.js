@@ -1769,6 +1769,26 @@ function editSpirit(spirit) {
 
 // Auth Functions
 async function checkSession() {
+    // BYPASS LOGIN FOR TESTING REDESIGN
+    currentUser = {
+        id: 'dummy-id',
+        username: 'Diseñador',
+        store_name: 'Viking TCG',
+        store_logo: 'https://vikingtcg.com/logo.png',
+        is_store: true,
+        role: 'admin',
+        max_albums: 10,
+        max_pages: 50,
+        max_decks: 10,
+        max_cards_per_deck: 100,
+        has_tracking: true,
+        has_clients: true,
+        has_auctions: true,
+        has_events: true
+    };
+    showAuthenticatedContent();
+    return;
+
     const { data: { session } } = await _supabase.auth.getSession();
     if (session) {
         const { data: user } = await _supabase
