@@ -382,6 +382,14 @@ $(document).ready(async function() {
         e.preventDefault();
         handleLogin();
     });
+
+// Designer Bypass (for testing)
+$('#btn-designer-view').click(function(e) {
+    e.preventDefault();
+    localStorage.setItem('designer_mode', 'true');
+    checkSession();
+});
+
     $('#btn-logout').click(function(e) {
         e.preventDefault();
         handleLogout();
@@ -1769,25 +1777,25 @@ function editSpirit(spirit) {
 
 // Auth Functions
 async function checkSession() {
-    // BYPASS LOGIN FOR TESTING REDESIGN
-    currentUser = {
-        id: 'dummy-id',
-        username: 'Diseñador',
-        store_name: 'Viking TCG',
-        store_logo: 'https://vikingtcg.com/logo.png',
-        is_store: true,
-        role: 'admin',
-        max_albums: 10,
-        max_pages: 50,
-        max_decks: 10,
-        max_cards_per_deck: 100,
-        has_tracking: true,
-        has_clients: true,
-        has_auctions: true,
-        has_events: true
-    };
-    showAuthenticatedContent();
-    return;
+    // Designer Bypass
+    if (localStorage.getItem('designer_mode') === 'true') {
+        currentUser = {
+            id: '00000000-0000-0000-0000-000000000000',
+            username: 'Diseñador',
+            role: 'admin',
+            is_store: true,
+            store_name: 'Tienda Demo',
+            max_albums: 10,
+            max_pages: 20,
+            max_decks: 10,
+            has_tracking: true,
+            has_clients: true,
+            has_auctions: true,
+            has_events: true
+        };
+        showAuthenticatedContent();
+        return;
+    }
 
     const { data: { session } } = await _supabase.auth.getSession();
     if (session) {
@@ -1860,6 +1868,7 @@ async function handleLogout() {
     await _supabase.auth.signOut();
     currentUser = null;
     localStorage.removeItem('tcg_session');
+    localStorage.removeItem('designer_mode');
     location.reload();
 }
 
@@ -1939,7 +1948,9 @@ async function showAuthenticatedContent() {
 
     // Generate public store link
     const identifier = currentUser.is_store && currentUser.store_name ? encodeURIComponent(currentUser.store_name) : encodeURIComponent(currentUser.username);
-    const publicUrl = `${window.location.origin}/${identifier}`;
+    const currentPath = window.location.pathname;
+    const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+    const publicUrl = `${window.location.origin}${basePath}/${identifier}`;
 
     const linkHtml = `
         <div class="share-card">
