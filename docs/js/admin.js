@@ -1950,7 +1950,8 @@ async function showAuthenticatedContent() {
     const identifier = currentUser.is_store && currentUser.store_name ? encodeURIComponent(currentUser.store_name) : encodeURIComponent(currentUser.username);
     const currentPath = window.location.pathname;
     const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-    const publicUrl = `${window.location.origin}${basePath}/${identifier}`;
+    // Ensure publicUrl points to public.html with the correct query param
+    const publicUrl = `${window.location.origin}${basePath}/public.html?id=${identifier}`;
 
     const linkHtml = `
         <div class="share-card">

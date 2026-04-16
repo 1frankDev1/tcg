@@ -39,16 +39,21 @@ function init() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 2.5);
+    // Lights - Brightened for modern look
+    const ambientLight = new THREE.AmbientLight(0xffffff, 3.5);
     scene.add(ambientLight);
 
-    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 2.0);
+    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 3.0);
     scene.add(hemisphereLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 4.0);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 5.0);
     directionalLight.position.set(5, 10, 7);
     scene.add(directionalLight);
+
+    // Added Rim Light for depth
+    const rimLight = new THREE.DirectionalLight(0xffffff, 3.0);
+    rimLight.position.set(-5, 5, -5);
+    scene.add(rimLight);
 
     clock = new THREE.Clock();
 
