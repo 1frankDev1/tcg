@@ -336,8 +336,88 @@ $(document).ready(async function() {
 
     $('.nav-btn').click(function() {
         const view = $(this).data('view');
-        if (view) switchView(view);
+        if (view && !isArcDragging) switchView(view);
     });
+
+    // --- Magic Arc Dragging Logic ---
+    const arc = document.getElementById('nav-arc');
+    let isArcDragging = false;
+    let startAngle = 0;
+    let currentRotation = 0;
+    let lastRotation = 0;
+
+    const getAngle = (x, y) => {
+        const rect = arc.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        return Math.atan2(y - centerY, x - centerX) * (180 / Math.PI);
+    };
+
+    const handleDragStart = (e) => {
+        if (window.innerWidth <= 768) return; // Disable drag on mobile
+        isArcDragging = true;
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        startAngle = getAngle(clientX, clientY);
+        arc.style.transition = 'none';
+
+        // Extract current rotation from transform
+        const style = window.getComputedStyle(arc);
+        const matrix = new WebKitCSSMatrix(style.transform);
+        lastRotation = Math.round(Math.atan2(matrix.b, matrix.a) * (180 / Math.PI));
+    };
+
+    const handleDragMove = (e) => {
+        if (!isArcDragging) return;
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        const currentAngle = getAngle(clientX, clientY);
+        let rotation = lastRotation + (currentAngle - startAngle);
+
+        // Constrain rotation between -60 and 60 (approx limits of arc)
+        rotation = Math.max(-80, Math.min(80, rotation));
+        currentRotation = rotation;
+        arc.style.transform = `rotate(${rotation}deg)`;
+    };
+
+    const handleDragEnd = () => {
+        if (!isArcDragging) return;
+        isArcDragging = false;
+        arc.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+
+        // Snap to closest view
+        const snapPoints = [
+            { view: 'albums', angle: 60 },
+            { view: 'sealed', angle: 40 },
+            { view: 'preorders', angle: 20 },
+            { view: 'decks', angle: 0 },
+            { view: 'wishlist', angle: -20 },
+            { view: 'auctions', angle: -40 },
+            { view: 'events', angle: -60 }
+        ];
+
+        let closest = snapPoints[0];
+        let minDiff = Math.abs(currentRotation - snapPoints[0].angle);
+
+        snapPoints.forEach(pt => {
+            const diff = Math.abs(currentRotation - pt.angle);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = pt;
+            }
+        });
+
+        switchView(closest.view);
+    };
+
+    if (arc) {
+        arc.addEventListener('mousedown', handleDragStart);
+        arc.addEventListener('touchstart', handleDragStart);
+        window.addEventListener('mousemove', handleDragMove);
+        window.addEventListener('touchmove', handleDragMove);
+        window.addEventListener('mouseup', handleDragEnd);
+        window.addEventListener('touchend', handleDragEnd);
+    }
 
     // Explicitly call the initial loader
     if (initialView === 'albums') {
@@ -721,12 +801,10 @@ function filterContent(query) {
     // Clear previous highlights
     $('.search-highlight').removeClass('search-highlight');
 
-    // Filtrar álbumes
+    // Filter Albums
     $('.public-album-item').each(function() {
         const $albumItem = $(this);
         const albumTitle = $albumItem.find('.public-album-header').text().toLowerCase();
-
-        // El álbum coincide si el título contiene TODOS los keywords
         let albumTitleMatch = keywords.every(k => albumTitle.includes(k));
 
         let firstMatchPage = -1;
@@ -735,30 +813,24 @@ function filterContent(query) {
         $albumItem.find('.card-slot').each(function() {
             const $slot = $(this);
             const cardName = ($slot.attr('data-name') || '').toLowerCase();
-
-            // La búsqueda debe ser insensible a mayúsculas/minúsculas y buscar en data-name
             const cardMatch = cardName && keywords.every(k => cardName.includes(k));
 
             if (cardMatch) {
                 anyCardMatches = true;
                 $slot.addClass('search-highlight');
                 if (firstMatchPage === -1) {
-                    // Usar el atributo data-page pre-calculado para mayor fiabilidad
                     firstMatchPage = parseInt($slot.attr('data-page')) || -1;
                 }
             }
         });
 
         if (albumTitleMatch || anyCardMatches) {
-            $albumItem.show();
+            $albumItem.css('display', 'flex'); // Use flex for Neumorphic container
             anyVisible = true;
-            // Si hubo coincidencia en cartas, girar a la primera página que coincide usando turn.js
             if (anyCardMatches && firstMatchPage !== -1) {
                 const $turnAlbum = $albumItem.find('.album');
                 if ($turnAlbum.turn('is')) {
                     const currentPage = $turnAlbum.turn('page');
-                    // En modo double, las páginas vienen en pares (2-3, 4-5, etc.)
-                    // Verificamos si la página destino ya está visible
                     const isAlreadyVisible = (currentPage === firstMatchPage) ||
                                            (currentPage % 2 === 0 && currentPage + 1 === firstMatchPage) ||
                                            (currentPage % 2 !== 0 && currentPage - 1 === firstMatchPage && currentPage > 1);
@@ -766,7 +838,6 @@ function filterContent(query) {
                     if (!isAlreadyVisible) {
                         isManualPageTurn = true;
                         $turnAlbum.turn('page', firstMatchPage);
-                        // Aumentamos el tiempo del flag para asegurar que termine la animación
                         setTimeout(() => { isManualPageTurn = false; }, 1500);
                     }
                 }
@@ -776,12 +847,12 @@ function filterContent(query) {
         }
     });
 
-    // Filtrar decks
+    // Filter Decks
     $('.deck-public-item').each(function() {
         const $deck = $(this);
         const deckName = $deck.find('h3').text().toLowerCase();
-
         let deckNameMatch = keywords.every(k => deckName.includes(k));
+
         let anyCardMatches = false;
         let firstMatchIndex = -1;
 
@@ -808,6 +879,17 @@ function filterContent(query) {
             }
         } else {
             $deck.hide();
+        }
+    });
+
+    // Filter Sealed/Preorders/Events
+    $('.sealed-product-item, .public-event-card').each(function() {
+        const text = $(this).text().toLowerCase();
+        if (keywords.every(k => text.includes(k))) {
+            $(this).show();
+            anyVisible = true;
+        } else {
+            $(this).hide();
         }
     });
 
@@ -1281,6 +1363,25 @@ async function switchView(view) {
 
     $('.nav-btn').removeClass('active');
     $(`.nav-btn[data-view="${view}"]`).addClass('active');
+
+    // Update Magic Arc Rotation
+    const arc = document.getElementById('nav-arc');
+    if (arc) {
+        const viewIndex = {
+            'albums': 0,
+            'sealed': 1,
+            'preorders': 2,
+            'decks': 3,
+            'wishlist': 4,
+            'auctions': 5,
+            'events': 6
+        }[view] || 0;
+
+        // Base rotation is -60 to +60. Center the active one at 0.
+        // Index 3 (decks) is already at 0.
+        const rotation = (3 - viewIndex) * 20;
+        arc.style.transform = `rotate(${rotation}deg)`;
+    }
 
     $('.view-section').removeClass('active');
     $(`#${view}-view`).addClass('active');
